@@ -1,126 +1,105 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Arrays;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * This class will serve as the intermediary between our ATM program and
+ * the database of BankAccounts. It'll be responsible for fetching accounts
+ * when users try to login, as well as updating those accounts after any
+ * changes are made.
+ */
+	
 
 public class Database {
-	
-	private String path;
-	private String[] accounts;
-	
-	public Database(String path) throws FileNotFoundException, IOException {
-		this.path = path;
-		this.accounts = getAllAccounts();
+	private HashMap<Integer, BankAccount> data = new HashMap<Integer, BankAccount>();
+	private int lastBANumber;
+	//private String filePath = "C:\\Users\\Aayush\\eclipse-workspace\\pset5\\src\\";
+	public void makeDatabase() throws FileNotFoundException, IOException {
+		
+		try(BufferedReader br = new BufferedReader(new FileReader(/* filePath */"accounts-db.txt"))) {
+ 			String line;
+ 			while((line = br.readLine()) != null) {
+ 				int size[] = {9, 4, 15, 20, 15, 8, 10, 30, 30, 2, 5, 1};
+ 				ArrayList<String> account = new ArrayList<String>();
+ 				int count = 0;
+ 				for(int i = 0; i<12; i++) {
+ 					account.add(line.substring(count, count+size[i]));
+ 					count = count + size[i];
+ 				}
+ 				User user = new User(account.get(1), account.get(3), account.get(4), account.get(5), account.get(6), account.get(7), account.get(8), account.get(9), account.get(10));
+ 				BankAccount bankAccount = new BankAccount(Integer.parseInt(account.get(0)), user, Double.parseDouble(account.get(2)), account.get(11));
+ 				data.put(bankAccount.getAccountNumber(), bankAccount);
+ 				lastBANumber = bankAccount.getAccountNumber();
+ 			}
+	 	}
+	 }
+	public int getNextBankAccountNumber() {
+		lastBANumber += 1;
+		return lastBANumber;
 	}
-	
-	/**
-	 * Initializes the database with all accounts.
-	 * 
-	 * @return an array of all accounts
-	 */
-	
-	public String[] getAllAccounts() throws FileNotFoundException, IOException {
-		int count = 0;
-		String[] accounts = new String[10];
-		
-		FileReader altered = null;
-		InputStreamReader original = null;
-		try {
-			altered = new FileReader(System.getProperty("user.dir") + File.separator + path);			
-		} catch (FileNotFoundException e) {
-			original = new InputStreamReader(getClass().getResourceAsStream(path));
+	public BankAccount getAccount(int bankAccountNumber) {
+		BankAccount hold = data.get(bankAccountNumber);
+		if (hold.getClose().equals("N")) {
+			return null;
 		}
-		
-		try (BufferedReader br = new BufferedReader(original != null ? original : altered)) {
-			String line;
-			
-			while ((line = br.readLine()) != null) {
-				if (count >= accounts.length) {
-					accounts = Arrays.copyOf(accounts, accounts.length + 10);
-				}
-				accounts[count++] = line;
-			}
-		}
-		
-		return Arrays.copyOf(accounts, count);
-	}
-	
-	/**
-	 * Retrieves an account by account number.
-	 * 
-	 * @param accountNumber the acocunt number of the account to retrieve
-	 * @return a BankAccount
-	 */
-	
-	public BankAccount getAccount(long accountNumber) {
-		for (String account : accounts) {
-			if (account.startsWith(String.valueOf(accountNumber)) && account.endsWith("Y")) {
-				return new BankAccount(account);
-			}
-		}
-		
-		return null;
-	}
-	
-	/**
-	 * Updates a BankAccount.
-	 * 
-	 * @param account the primary account being updated
-	 * @param destination the secondary account being updated
-	 * @throws IOException 
-	 */
-	
-	public void updateAccount(BankAccount account, BankAccount destination) throws IOException {
-		boolean newAccount = true;
-		
-		for (int i = 0; i < accounts.length; i++) {			
-			if (accounts[i].startsWith(String.valueOf(account.getAccountNumber()))) {
-				accounts[i] = account.toString();
-				newAccount = false;
-			}
-			
-			if (destination != null) {
-				if (accounts[i].startsWith(String.valueOf(destination.getAccountNumber()))) {
-					accounts[i] = destination.toString();
-				}
-			}
-		}
-		
-		if (newAccount) {
-			accounts = Arrays.copyOf(accounts, accounts.length + 1);
-			accounts[accounts.length - 1] = account.toString();
-		}
-		
-		try (BufferedWriter bw = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + File.separator + path))) {
-			for (String acct : accounts) {
-				bw.write(acct);
-				bw.newLine();
-			}
+		else {
+			return hold;
 		}
 	}
-	
-	/**
-	 * Retrieves the largest account number in the database.
-	 * 
-	 * @return the largest account number
-	 */
-	
-	public long getMaxAccountNumber() {
-		long max = -1L;
+	public static String padRight(String s, int n) {
+	     return String.format("%1$-" + n + "s", s);  
+	}
+	public String convertAccountToString(BankAccount input) {
+		String PIN = input.getUser().getPIN();
+		String last_name = padRight(input.getUser().getLast_Name(), 20);
+		String first_name = padRight(input.getUser().getFirst_Name(), 15);
+		String dob = input.getUser().getdob();
+		String phone = input.getUser().getPhone();
+		String address = padRight(input.getUser().getAddress(), 30);
+		String city = padRight(input.getUser().getCity(), 30);
+		String state = padRight(input.getUser().getState(), 2);
+		String postalCode = input.getUser().getPostal_Code();
+		String BankAccountNumber = Integer.toString(input.getAccountNumber());
+		String balance = padRight(Double.toString(input.getBalance()), 15);
+		String close = input.getClose();
 		
-		for (String account : accounts) {
-			long accountNumber = Long.parseLong(account.substring(0, 9));
-			
-			if (accountNumber > max) {
-				max = accountNumber;
+		String total = BankAccountNumber + PIN + balance + last_name + first_name + dob + phone + address + city + state + postalCode + close;
+		return total; 
+	}
+	
+	public boolean addBankAccount(BankAccount input) {
+		try(FileWriter fw = new FileWriter(/* filePath */"accounts-db.txt", true);
+			    BufferedWriter bw = new BufferedWriter(fw);
+			    PrintWriter out = new PrintWriter(bw))
+			{
+			    out.println(convertAccountToString(input));
+			    data.put(input.getAccountNumber(), input);
+			} catch (IOException e) {
+			    //exception handling left as an exercise for the reader
 			}
-		}
-		
-		return max;
+		return true;
+	}
+	public boolean updateAccounts() {
+		try(FileWriter fw = new FileWriter(/* filePath */"accounts-db.txt", false);
+			    BufferedWriter bw = new BufferedWriter(fw);
+			    PrintWriter out = new PrintWriter(bw))  
+			{
+			for (Map.Entry<Integer, BankAccount> entry : data.entrySet()) {
+			    Integer key = entry.getKey();
+			    BankAccount value = entry.getValue();
+			    out.println(convertAccountToString(value));
+			}
+			    
+			} catch (IOException e) {
+			    //exception handling left as an exercise for the reader
+			}
+		return true;
 	}
 }
